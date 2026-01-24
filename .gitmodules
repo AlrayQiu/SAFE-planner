@@ -1,0 +1,4 @@
+[submodule "ros_packages/src/thrid_party/unity_tcp_endpoint"]
+	path = ros_packages/src/thrid_party/unity_tcp_endpoint
+	url = https://github.com/AlrayQiu/ROS-TCP-Endpoint
+	branch = main-ros2
