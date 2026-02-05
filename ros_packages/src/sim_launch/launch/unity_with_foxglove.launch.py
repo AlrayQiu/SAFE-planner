@@ -23,7 +23,8 @@ def generate_launch_description():
         output="screen",
         parameters=[{
             "port": 8765,
-            "address": "0.0.0.0"
+            "address": "0.0.0.0",
+            "send_buffer_limit" : 104857600,
         }]
     )
 
