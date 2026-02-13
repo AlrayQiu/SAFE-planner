@@ -27,11 +27,11 @@ const std::string out_bound_topic_name 	= "/rogmap/map_bound";
 
 const std::string frame_id 				= "car";
 
-class MapTest : public rclcpp::Node {
+class RRTStarTest : public rclcpp::Node {
 public:
-  	MapTest() 
+  	RRTStarTest() 
 	: Node("map_test")
-	, map({50,50,50}, 0.1, true, 1, {0,0,0}, {})
+	, map_({100,100,20}, 0.1, true, 1, {0,0,0}, {})
 	, sub_pcd_(
 		create_subscription<sensor_msgs::msg::PointCloud2>(
 		in_pcd_topic_name, 10, 
@@ -43,20 +43,20 @@ public:
 		create_subscription<geometry_msgs::msg::PoseStamped>(
 		in_pose_topic_name, 10, 
 		[this](const geometry_msgs::msg::PoseStamped::SharedPtr msg){
-			robit_position_(0) = msg->pose.position.x;
-			robit_position_(1) = msg->pose.position.y;
-			robit_position_(2) = msg->pose.position.z;
+			robot_position_(0) = msg->pose.position.x;
+			robot_position_(1) = msg->pose.position.y;
+			robot_position_(2) = msg->pose.position.z;
 		}))
 	, pub_pcd_(create_publisher<sensor_msgs::msg::PointCloud2>(out_pcd_topic_name, 1))
 	, pub_marker_(create_publisher<visualization_msgs::msg::MarkerArray>(out_bound_topic_name, 1))
 	, timer_(
 		create_timer(std::chrono::milliseconds(100), 
 		[this](){
-			map.update(pcd_, robit_position_);
+			map_.update(pcd_, robot_position_);
 			
 			pcl::PointCloud<pcl::PointXYZI> occupied_pcd{};
 			sensor_msgs::msg::PointCloud2 	msg{};
-			map.get_occupied_points(occupied_pcd);
+			map_.get_occupied_points(occupied_pcd);
 			pcl::toROSMsg(occupied_pcd, msg);
 			msg.header.frame_id = frame_id;
 			pub_pcd_->publish(msg);
@@ -64,7 +64,7 @@ public:
 
 
 			Eigen::Vector3f p,bmin,bmax;
-			map.get_local_scale(p, bmin, bmax);
+			map_.get_local_scale(p, bmin, bmax);
 			visualization_msgs::msg::MarkerArray markers;
 
 			// 1. 无人机位置点
@@ -145,7 +145,7 @@ public:
 	}
 
 private:
-	safe_planner::map::ROGMap map;
+	safe_planner::map::ROGMap map_;
 	rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr		sub_pcd_;
 	rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr 	sub_pose_;
 	
@@ -153,7 +153,7 @@ private:
 	rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr 	pub_marker_;
 
 	rclcpp::TimerBase::SharedPtr timer_;
-	Eigen::Vector3f robit_position_;
+	Eigen::Vector3f robot_position_;
 	pcl::PointCloud<pcl::PointXYZINormal> pcd_;
 };
 
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
   	(void)argc;
   	(void)argv;
   	rclcpp::init(argc, argv);
-  	auto node = std::make_shared<MapTest>();
+  	auto node = std::make_shared<RRTStarTest>();
   	rclcpp::spin(node);
   	rclcpp::shutdown();
 }

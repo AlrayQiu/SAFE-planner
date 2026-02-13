@@ -6,6 +6,8 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+#include "safe_planner/map/imap.hpp"
+
 namespace safe_planner::map {
 
 namespace rog_map {
@@ -18,7 +20,7 @@ struct Config{
     const float intensity_thresh{0};
     const int   update_pcd_batch_size{1};
 
-    const int    inflation_radius{1};
+    const float  inflation_radius{0.2};
     const float  uva_nearby_zone{0.5};
     const struct ProblisticConfig{
         const float l_miss = -0.27;
@@ -31,7 +33,7 @@ struct Config{
 };
 }
 
-class ROGMap final
+class ROGMap final : public IMap
 {
 public:
     ROGMap() = delete;
@@ -49,6 +51,12 @@ public:
     void get_occupied_points(pcl::PointCloud<pcl::PointXYZI> &out_points) const;
     void get_local_scale(Eigen::Vector3f& position, Eigen::Vector3f& map_min, Eigen::Vector3f& map_max) const;
 
+    State check_line_i(const Eigen::Vector3i& from, const Eigen::Vector3i& to) const;
+    State check_line_d(const Eigen::Vector3f& from, const Eigen::Vector3f& to) const;
+    State check_point_i (const Eigen::Vector3i& index) const;
+    State check_point_d (const Eigen::Vector3f& pos)   const;
+    void get_map_bound_i(Eigen::Vector3i& min,Eigen::Vector3i& max) const;
+    void get_map_bound_d(Eigen::Vector3f& min,Eigen::Vector3f& max) const;
 private:  
     class ROGMapImpl;
     std::unique_ptr<ROGMapImpl> impl_;

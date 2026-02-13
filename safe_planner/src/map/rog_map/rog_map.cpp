@@ -54,7 +54,7 @@ public:
     ) 
     : config_(std::move(map_config))
     , ogm_(half_map_size_i, config_.prob_config)
-    , inf_map_(half_map_size_i,config_.inflation_radius)
+    , inf_map_(half_map_size_i,static_cast<int>(config_.inflation_radius / resolution))
     , memory_(ogm_, inf_map_)
     , sliding_map_(
         half_map_size_i,
@@ -92,7 +92,7 @@ public:
             Vector3i global_index{i,j,k};
             auto index = sliding_map_.get_hash_id_from_global_index(global_index);
             auto val = ogm_.occupancy_buffer_[index];
-            if(!ogm_.is_occupied(val)) continue;
+            if(!inf_map_.is_occupied(index)) continue;
             
             sliding_map_.global_index_to_pos(global_index, p);                    
             out_points.push_back({p.x(),p.y(),p.z(),val});
@@ -122,10 +122,55 @@ public:
         }
     }
 
-    void get_local_scale(Eigen::Vector3f& position, Eigen::Vector3f& map_min, Eigen::Vector3f& map_max) const{
-        position = robot_position_d_;
+    void get_robot_pos( Eigen::Vector3f& pos) const{
+        pos = robot_position_d_;
+    }
+
+    void get_local_scale_d( Eigen::Vector3f& map_min, Eigen::Vector3f& map_max) const{
         map_min = sliding_map_.local_map_bound_min_d_;
         map_max = sliding_map_.local_map_bound_max_d_;
+    }
+    void get_local_scale_i( Eigen::Vector3i& map_min, Eigen::Vector3i& map_max) const{
+        map_min = sliding_map_.local_map_bound_min_i_;
+        map_max = sliding_map_.local_map_bound_max_i_;
+    }
+
+
+    State check_line_d(const Eigen::Vector3f& from, const Eigen::Vector3f& to){
+        if(!ray_caster_.set_input(from, to)) return IMap::State::Safe;
+        Eigen::Vector3i point;
+        while(ray_caster_.next(point))
+            if(check_point_i(point) == IMap::State::Unsafe)
+            return IMap::State::Unsafe;
+
+        return IMap::State::Safe;
+    }
+    State check_line_i(const Eigen::Vector3i& from, const Eigen::Vector3i& to){
+        Eigen::Vector3f f,t;
+        sliding_map_.global_index_to_pos(from,f);
+        sliding_map_.global_index_to_pos(to,t);
+        if(!ray_caster_.set_input(f,t)) return IMap::State::Safe;
+        Eigen::Vector3i point;
+        while(ray_caster_.next(point))
+            if(check_point_i(point) == IMap::State::Unsafe)
+            return IMap::State::Unsafe;
+
+        return IMap::State::Safe;
+    }
+
+    State check_point_i(const Eigen::Vector3i& i){
+        if(!sliding_map_.inside_local_map(i)) return IMap::State::Safe;
+        if(inf_map_.is_occupied(sliding_map_.get_hash_id_from_global_index(i)))
+            return IMap::State::Unsafe;
+        return IMap::State::Safe;
+    }
+    
+    State check_point_d(const Eigen::Vector3f& p){
+        if(!sliding_map_.inside_local_map(p)) return IMap::State::Safe;
+        if(inf_map_.is_occupied(sliding_map_.get_hash_index_from_pos(p)))
+            return IMap::State::Unsafe;
+
+        return IMap::State::Safe;
     }
     
 
@@ -322,7 +367,7 @@ private:
 
     Vector3f robot_position_d_;
     
-    Config  config_;
+    const Config  config_;
     
     ProblisticMap                   ogm_;
     InflationMap<center_position>   inf_map_;
@@ -363,6 +408,26 @@ void ROGMap::get_occupied_points(pcl::PointCloud<pcl::PointXYZI> &out_points) co
 }
 
 void ROGMap::get_local_scale(Eigen::Vector3f& position, Eigen::Vector3f& map_min, Eigen::Vector3f& map_max) const{
-    impl_->get_local_scale(position, map_min, map_max);
+    impl_->get_robot_pos(position);
+    impl_->get_local_scale_d(map_min, map_max);
+}
+
+
+IMap::State ROGMap::check_line_i(const Eigen::Vector3i& from, const Eigen::Vector3i& to) const{
+    return impl_->check_line_i(from, to);
+}
+IMap::State ROGMap::check_line_d(const Eigen::Vector3f& from, const Eigen::Vector3f& to) const{
+    return impl_->check_line_d(from, to);
+}
+IMap::State ROGMap::check_point_i (const Eigen::Vector3i& index) const{
+    return impl_->check_point_i(index);
+}
+IMap::State ROGMap::check_point_d (const Eigen::Vector3f& pos)   const{
+    return impl_->check_point_d(pos);}
+void ROGMap::get_map_bound_i(Eigen::Vector3i& min,Eigen::Vector3i& max) const{
+    impl_->get_local_scale_i(min, max);
+}
+void ROGMap::get_map_bound_d(Eigen::Vector3f& min,Eigen::Vector3f& max) const{
+    impl_->get_local_scale_d(min, max);
 }
 }
