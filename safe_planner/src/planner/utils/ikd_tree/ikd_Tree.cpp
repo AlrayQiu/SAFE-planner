@@ -1,5 +1,5 @@
 #include "ikd_Tree.h"
-#include "../../rrt_star.hpp"
+#include "../../front_end/rrt_star.hpp"
 #include <cstddef>
 
 /*

@@ -12,7 +12,7 @@
 #include <Eigen/Eigen>
 
 #include "safe_planner/map/imap.hpp"
-#include "./utils/ikd_tree/ikd_Tree.h"
+#include "../utils/ikd_tree/ikd_Tree.h"
 
 
 namespace safe_planner::planner {
