@@ -11,6 +11,7 @@ enum class State{
     Unsafe  
 };
 
+virtual ~IMap() = default;
 
 virtual State check_line_i(const Eigen::Vector3i& form, const Eigen::Vector3i& to) const= 0;
 virtual State check_line_d(const Eigen::Vector3f& form, const Eigen::Vector3f& to) const= 0;
