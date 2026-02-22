@@ -36,14 +36,14 @@ struct ProblisticMap final{
     inline void reset_local_map(){
         std::fill(occupancy_buffer_.begin(), occupancy_buffer_.end(), 0);
     }
-    inline void reset_cell(const int& id){
+    inline void reset_cell(const int id){
         occupancy_buffer_[static_cast<size_t>(id)] = 0;
     }
 
-    inline bool is_occupied(const float& log_odds_value) const{
+    inline bool is_occupied(const float log_odds_value) const{
         return log_odds_value >= config_.l_occu;
     }
-    inline bool is_free(const float& log_odds_value) const{
+    inline bool is_free(const float log_odds_value) const{
         return log_odds_value <= config_.l_free;
     }
 

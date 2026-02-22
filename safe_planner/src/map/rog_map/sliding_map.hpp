@@ -20,7 +20,7 @@ namespace safe_planner::map::rog_map {
 class ICellMemoryReseter{
 public:
     virtual void reset_local_map() = 0;
-    virtual void reset_cell(const int& id) = 0;
+    virtual void reset_cell(const int id) = 0;
 };
 
 using namespace Eigen;
@@ -33,7 +33,7 @@ public:
     inline SlidingMap(
         const Vector3i &half_map_size_i,
         const double &resolution,
-        const bool &map_sliding_en,
+        const bool map_sliding_en,
         const double &sliding_thresh,
         const Vector3f &fix_map_origin,
         T& cell_memory_reseter 
@@ -160,7 +160,7 @@ public:
     Vector3f local_map_origin_d_, local_map_bound_min_d_, local_map_bound_max_d_;
     Vector3i local_map_origin_i_, local_map_bound_min_i_, local_map_bound_max_i_;
 
-    inline void clear_memory_out_of_map(const std::vector<int> &clear_ids, const int &axis){
+    inline void clear_memory_out_of_map(const std::vector<int> &clear_ids, const int axis){
         std::vector<int> ids{axis, (axis + 1) % 3, (axis + 2) % 3};
         for (const auto &idd: clear_ids) {
             for (int x = -sliding_config_.half_map_size_i(ids[1]); x <= sliding_config_.half_map_size_i(ids[1]); x++) {
@@ -265,20 +265,20 @@ public:
         }
     }
 
-    inline void hash_id_to_local_index(const int &hash_id, Vector3i &local_index) const{                        
+    inline void hash_id_to_local_index(const int hash_id, Vector3i &local_index) const{                        
         local_index(0) = hash_id / (sliding_config_.map_size_i(1) * sliding_config_.map_size_i(2));
         local_index(1) = (hash_id - local_index(0) * sliding_config_.map_size_i(1) * sliding_config_.map_size_i(2)) / sliding_config_.map_size_i(2);
         local_index(2) = hash_id - local_index(0) * sliding_config_.map_size_i(1) * sliding_config_.map_size_i(2) - local_index(1) * sliding_config_.map_size_i(2);
         local_index -= sliding_config_.half_map_size_i;
     }
 
-    inline void hash_id_to_pos(const int &hash_id, Vector3f &pos) const{
+    inline void hash_id_to_pos(const int hash_id, Vector3f &pos) const{
         Vector3i id;
         hash_id_to_local_index(hash_id, id);
         local_index_to_pos(id, pos);
     }
 
-    inline void hash_id_to_global_index(const int &hash_id, Vector3i &global_index) const{        
+    inline void hash_id_to_global_index(const int hash_id, Vector3i &global_index) const{        
         Vector3i id;
         id(0) = hash_id / (sliding_config_.map_size_i(1) * sliding_config_.map_size_i(2));
         id(1) = (hash_id - id(0) * sliding_config_.map_size_i(1) * sliding_config_.map_size_i(2)) / sliding_config_.map_size_i(2);

@@ -32,7 +32,7 @@ public:
         ogm_.reset_local_map();
         inf_map_.reset_local_map();
     };
-    inline void reset_cell(const int& id) {
+    inline void reset_cell(const int id) {
         ogm_.reset_cell(id);
         inf_map_.reset_cell(id);
     };
@@ -213,7 +213,7 @@ private:
         }
     }
 
-    inline void update_hit(const Vector3i& global_index, const int& hash_id, const int& hit_num){
+    inline void update_hit(const Vector3i& global_index, const int hash_id, const int hit_num){
         
         float& ret = ogm_.occupancy_buffer_[hash_id];
         GridType from_type = GridType::UNDEFINED;
@@ -237,7 +237,7 @@ private:
                 to_type);
     } 
 
-    inline void update_miss(const Vector3i& global_index, const int& hash_id, const int& hit_num){
+    inline void update_miss(const Vector3i& global_index, const int hash_id, const int hit_num){
         float& ret = ogm_.occupancy_buffer_[hash_id];
         GridType from_type;
         check_state(ret, from_type);
