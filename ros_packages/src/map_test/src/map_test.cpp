@@ -27,9 +27,9 @@ const std::string out_bound_topic_name 	= "/rogmap/map_bound";
 
 const std::string frame_id 				= "car";
 
-class RRTStarTest : public rclcpp::Node {
+class MincoTest : public rclcpp::Node {
 public:
-  	RRTStarTest() 
+  	MincoTest() 
 	: Node("map_test")
 	, map_({100,100,20}, 0.1, true, 1, {0,0,0}, {})
 	, sub_pcd_(
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
   	(void)argc;
   	(void)argv;
   	rclcpp::init(argc, argv);
-  	auto node = std::make_shared<RRTStarTest>();
+  	auto node = std::make_shared<MincoTest>();
   	rclcpp::spin(node);
   	rclcpp::shutdown();
 }

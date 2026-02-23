@@ -2,6 +2,6 @@
 	path = ros_packages/src/thrid_party/unity_tcp_endpoint
 	url = https://github.com/AlrayQiu/ROS-TCP-Endpoint
 	branch = main-ros2
-[submodule "safe_planner/thirdparty/LBFGSpp"]
-	path = safe_planner/thirdparty/LBFGSpp
-	url = https://github.com/yixuan/LBFGSpp.git
+[submodule "safe_planner/thirdparty/LBFGS-Lite"]
+	path = safe_planner/thirdparty/LBFGS-Lite
+	url = https://github.com/ZJU-FAST-Lab/LBFGS-Lite

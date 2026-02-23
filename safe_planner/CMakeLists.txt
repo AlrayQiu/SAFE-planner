@@ -9,9 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
 project(safest_planner)
-
 
 file(GLOB_RECURSE srcs CONFIGURE_DEPENDS src/**.cpp)
 
@@ -33,6 +31,7 @@ $<INSTALL_INTERFACE:include>
 ${PCL_INCLUDE_DIRS}
 ${Eigen3_INCLUDE_DIRS}
 )
+
 
 target_link_libraries(safe_planner PRIVATE 
 ${PCL_LIBRARIES}
