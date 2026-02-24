@@ -15,9 +15,11 @@
 #include "minco_test/time_test.hpp"
 
 #include "safe_planner/planner/middle_end.hpp"
+
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "std_msgs/msg/float32_multi_array.hpp"
 
 #include <pcl_conversions/pcl_conversions.h>
 
@@ -33,6 +35,9 @@ const std::string in_target_topic_name 	= "/sim/target";
 
 const std::string out_trajectory_topic_name 		= "/middle_end/trajectory"; 
 const std::string out_pcd_topic_name 				= "/rogmap/occupied_pcd"; 
+const std::string out_vel_topic_name 				= "/middle_end/velocity"; 
+const std::string out_acc_topic_name 				= "/middle_end/acceleration";
+const std::string out_time_topic_name 				= "/middle_end/time"; 
 const std::string out_path_topic_name 				= "/front_end/path"; 
 const std::string out_control_points_topic_name 	= "/middle_end/control_points";
 
@@ -71,6 +76,9 @@ public:
 	, pub_pcd_(create_publisher<sensor_msgs::msg::PointCloud2>(out_pcd_topic_name, 1))
 	, pub_path_(create_publisher<nav_msgs::msg::Path>(out_path_topic_name, 1))
 	, pub_traj_(create_publisher<nav_msgs::msg::Path>(out_trajectory_topic_name, 1))
+	, pub_time_(create_publisher<std_msgs::msg::Float32MultiArray>(out_time_topic_name, 1))
+	, pub_vel_(create_publisher<std_msgs::msg::Float32MultiArray>(out_vel_topic_name, 1))
+	, pub_acc_(create_publisher<std_msgs::msg::Float32MultiArray>(out_acc_topic_name, 1))
 	, pub_control_points_(create_publisher<nav_msgs::msg::Path>(out_control_points_topic_name, 1))
 	, tt_()
 	, timer_(
@@ -98,12 +106,18 @@ public:
 			if(tt_.Log(info)){
 				RCLCPP_INFO(get_logger(),"[RRTStar Run] %s",info.c_str());
 			}
+			std_msgs::msg::Float32MultiArray time_msg;
+			std_msgs::msg::Float32MultiArray vel_msg;
+			std_msgs::msg::Float32MultiArray acc_msg;
 			nav_msgs::msg::Path traj_msg;
 			traj_msg.header.frame_id = frame_id;
-			safe_planner::planner::ITrajectory::seconds t1,t2,err{0.1f};
+			safe_planner::planner::ITrajectory::seconds t1,t2,err{0.01f};
 			trajectory.get_time_range(t1,t2);
 			for(auto t = t1; t < t2; t += err){
-				Eigen::Vector3f p = trajectory.pos(safe_planner::planner::trajectory::Minco::seconds{t});
+				Eigen::Vector3f p = trajectory.pos(t);
+				time_msg.data.push_back(t.count());
+				vel_msg.data.push_back(trajectory.vel(t));
+				acc_msg.data.push_back(trajectory.acc(t));
 				geometry_msgs::msg::PoseStamped pose;
 				pose.header.frame_id = frame_id;
 				pose.pose.position.x = p.x();
@@ -111,7 +125,22 @@ public:
 				pose.pose.position.z = p.z();
 				traj_msg.poses.push_back(pose);
 			}
+			time_msg.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+			time_msg.layout.dim[0].size = time_msg.data.size();
+			time_msg.layout.dim[0].stride = time_msg.data.size();
+			time_msg.layout.dim[0].label = "time";
+			vel_msg.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+			vel_msg.layout.dim[0].size = vel_msg.data.size();
+			vel_msg.layout.dim[0].stride = vel_msg.data.size();
+			vel_msg.layout.dim[0].label = "velocity";
+			acc_msg.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+			acc_msg.layout.dim[0].size = acc_msg.data.size();
+			acc_msg.layout.dim[0].stride = acc_msg.data.size();
+			acc_msg.layout.dim[0].label = "acceleration";
 			pub_traj_->publish(traj_msg);
+			pub_time_->publish(time_msg);
+			pub_vel_->publish(vel_msg);
+			pub_acc_->publish(acc_msg);
 
 			nav_msgs::msg::Path path_msg;
 			path_msg.header.frame_id = frame_id;
@@ -144,6 +173,9 @@ public:
 		RCLCPP_INFO(get_logger(),"\t [in]  pcd   : %s", in_pcd_topic_name.c_str());
 		RCLCPP_INFO(get_logger(),"\t [in]  pose  : %s", in_pose_topic_name.c_str());
 		RCLCPP_INFO(get_logger(),"\t [in]  target: %s", in_target_topic_name.c_str());
+		RCLCPP_INFO(get_logger(),"\t [out] time  : %s", out_time_topic_name.c_str());
+		RCLCPP_INFO(get_logger(),"\t [out] vel   : %s", out_vel_topic_name.c_str());
+		RCLCPP_INFO(get_logger(),"\t [out] acc   : %s", out_acc_topic_name.c_str());
 		RCLCPP_INFO(get_logger(),"\t [out] pcd   : %s", out_pcd_topic_name.c_str());
 		RCLCPP_INFO(get_logger(),"\t [out] path  : %s", out_path_topic_name.c_str());
 		RCLCPP_INFO(get_logger(),"\t [out] traj  : %s", out_trajectory_topic_name.c_str());
@@ -165,6 +197,9 @@ private:
 	rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr		pub_pcd_;
 	rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr				pub_path_;
 	rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr				pub_traj_;
+	rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr	pub_time_;
+	rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr	pub_vel_;
+	rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr	pub_acc_;
 	rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr				pub_control_points_;
 
 	TimeTest tt_;

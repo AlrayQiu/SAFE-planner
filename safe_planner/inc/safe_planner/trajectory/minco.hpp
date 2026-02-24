@@ -23,12 +23,41 @@ inline Eigen::Vector3f pos(const seconds s) const{
     Eigen::RowVector<float, 6> B;
     auto t = std::upper_bound(times.begin(), times.end(), s) - 1;
     auto time = s.count() - t->count();
-    if(t >= times.end()) t = times.end() - 1;
     utils::power_base<6>(time, 0, B);
     auto i = std::distance(times.begin(),t);
     // std::cerr << s <<  times[i] << std::endl;
     return (B * params.block<6,3>(i*6,0)).transpose();
 };
+inline float vel(seconds s) const{
+    if(s >= *times.rbegin()) {
+        Eigen::RowVector<float, 6> B;
+        auto t = times.rbegin()->count() - (times.rbegin() + 1) -> count();
+        trajectory::utils::power_base<6>(t, 1, B);
+        return (B * params.block<6,3>((M_ - 1)*6,0)).transpose().norm();
+    }
+    Eigen::RowVector<float, 6> B;
+    auto t = std::upper_bound(times.begin(), times.end(), s) - 1;
+    auto time = s.count() - t->count();
+    utils::power_base<6>(time, 1, B);
+    auto i = std::distance(times.begin(),t);
+    // std::cerr << s <<  times[i] << std::endl;
+    return (B * params.block<6,3>(i*6,0)).transpose().norm();
+}
+inline float acc(seconds s) const{
+    if(s >= *times.rbegin()) {
+        Eigen::RowVector<float, 6> B;
+        auto t = times.rbegin()->count() - (times.rbegin() + 1) -> count();
+        trajectory::utils::power_base<6>(t, 2, B);
+        return (B * params.block<6,3>((M_ - 1)*6,0)).transpose().norm();
+    }
+    Eigen::RowVector<float, 6> B;
+    auto t = std::upper_bound(times.begin(), times.end(), s) - 1;
+    auto time = s.count() - t->count();
+    utils::power_base<6>(time, 2, B);
+    auto i = std::distance(times.begin(),t);
+    // std::cerr << s <<  times[i] << std::endl;
+    return (B * params.block<6,3>(i*6,0)).transpose().norm();
+}
 inline std::vector<Eigen::Vector3f> control_point(std::vector<Eigen::Vector3f>& s) const{
     s.clear();
     for(int i = 1; i < M_; i++){
@@ -101,6 +130,10 @@ void build_m(){
         auto curr_row = i * s2() - s();
         auto crr_col = s2() * (i - 1);
         const auto t = (times[i] - times[i - 1]).count();
+        const auto t1 = t;
+        const auto t2 = t1 * t;
+        const auto t3 = t2 * t;
+        const auto t4 = t3 * t;
         utils::power_base<6>(t, 0, b);
         for(int j = 0;j < s2();++j){
             auto b_0_j = b(j);
@@ -109,10 +142,10 @@ void build_m(){
             auto b_3_j = b_2_j * (j - 2);
             auto b_4_j = b_3_j * (j - 3);
             if(t!=0){
-                b_1_j /= t;
-                b_2_j /= t;
-                b_3_j /= t;
-                b_4_j /= t;
+                b_1_j /= t1;
+                b_2_j /= t2;
+                b_3_j /= t3;
+                b_4_j /= t4;
             }
             m_(curr_row,      crr_col + j) = b_0_j;
             m_(curr_row + 1,  crr_col + j) = b_0_j;

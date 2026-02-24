@@ -23,7 +23,7 @@ inline void clear_j_g(){
     time_err_ = *times.rbegin() - time_min_; 
     const auto M = minco_.times.size() - 1;
     minimal_snap(M,param,times);
-    dynamic(0.1,param,times);
+    // dynamic(0.1,param,times);
 };
 void add_j(const float j){j_ += j;}
 void add_g(const float ratio, const int i, const Eigen::Vector3f& dk_dp){
@@ -87,7 +87,7 @@ void init_x(Eigen::VectorXf& x) const{
         x.block<3,1>(i*3, 0) = minco_.params.row((i + 1) * 6);
     }
     float tau;
-    for(int i = 0;i < minco_.times.size() - 1;i++){
+    for(int i = 0;i < M + 1;i++){
         t_to_tau((minco_.times[i + 1] - minco_.times[i]).count() ,tau);
         x(L + i) = tau;
     }
@@ -149,22 +149,23 @@ inline float tr_gg_dei_dt_ci(const int i, const auto& G) const{
     Eigen::Vector<float,6> b;
     auto curr = i * 6 - 3;
     const auto t = (minco_.times[i] - minco_.times[i - 1]).count();
+    const auto t2 = t;
+    const auto t3 = t2 * t;
+    const auto t4 = t3 * t;
+    const auto t5 = t4 * t;
     trajectory::utils::power_base<6>(t, 1, b);
     Eigen::Matrix<float,6,6> Ei{};
     for(int j = 0;j < 6;++j){
-        if(t == 0)
-        {
             Ei(0,j) = Ei(1,j) = b(j);
             Ei(2,j) = Ei(1,j) * (j - 1);
             Ei(3,j) = Ei(2,j) * (j - 2);
             Ei(4,j) = Ei(3,j) * (j - 3);
             Ei(5,j) = Ei(4,j) * (j - 4);
-        } else{
-            Ei(0,j) = Ei(1,j) = b(j);
-            Ei(2,j) = Ei(1,j) * (j - 1) / t;
-            Ei(3,j) = Ei(2,j) * (j - 2) / t;
-            Ei(4,j) = Ei(3,j) * (j - 3) / t;
-            Ei(5,j) = Ei(4,j) * (j - 4) / t;
+        if(t != 0){
+            Ei(2,j) /= t2;
+            Ei(3,j) /= t3;
+            Ei(4,j) /= t4;
+            Ei(5,j) /= t5;
         }
     }
     return (G.template block<6,3>(curr, 0).transpose() * Ei * minco_.params.block<6,3>((i - 1) * 6,0)).trace();
@@ -177,15 +178,12 @@ inline float tr_gg_dem_dt_ci(const int m, const auto& G) const{
     Eigen::Matrix<float,3,6> Em{};
     Em.setZero();
     for(int j = 0;j < 6;++j){
-        if(t == 0)
-        {
             Em(0,j) = b(j);
             Em(1,j) = Em(0,j) * (j - 1);
             Em(2,j) = Em(1,j) * (j - 2);
-        }else{
-            Em(0,j) = b(j);
-            Em(1,j) = Em(0,j) * (j - 1) / t;
-            Em(2,j) = Em(1,j) * (j - 2) / t;
+        if(t != 0){
+            Em(1,j) = Em(1,j) / t;
+            Em(2,j) = Em(2,j) / t / t;
         }
     }
     return (G.template block<3,3>(curr, 0).transpose() * Em * minco_.params.block<6,3>((m - 1) * 6,0)).trace();
@@ -219,12 +217,11 @@ inline void dynamic(const float rate, const auto& param, const auto& times){
         static Eigen::RowVector<float, 6> b3{};
         trajectory::utils::power_base<6>(t, 1, b1);
         for(int j = 0;j < 6;++j){
-            if(t == 0){
                 b2(j) = b1(j) * (j - 1);
-                b3(j) = b2(j) * (j - 2);    
-            }else{
-                b2(j) = b1(j) * (j - 1) / t;
-                b3(j) = b2(j) * (j - 2) / t;
+                b3(j) = b2(j) * (j - 2);   
+            if(t != 0){ 
+                b2(j) = b2(j) / t;
+                b3(j) = b3(j) / t / t;
             }
         }
         const auto& ci = param.template block<6,3>(i * 6,0);
@@ -271,6 +268,6 @@ Eigen::VectorXf dJ_dt_{};
 
 const int vmax_square = 9;
 const int amax_square = 9;
-const float time_wight = 20;
+const float time_wight = 50;
 };
 }

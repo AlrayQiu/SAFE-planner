@@ -36,19 +36,23 @@ void optimize(
         /* Set the minimization parameters */
         lbfgs::lbfgs_parameter_t params;
         params.g_epsilon = 1.0e-8;
-        params.past = 3;
+        params.past = 5;
         params.delta = 1.0e-8;
-        params.max_iterations = 20;
+        params.max_iterations = 50;
         optdata data{this, &opt, ref_path};
         /* Start minimization */
-        int ret = lbfgs::lbfgs_optimize(x,
-                                        fx,
-                                        cost_function,
-                                        nullptr,
-                                        nullptr,
-                                        &data,
-                                        params);
-        opt.set_x(x);
+        auto ret = lbfgs::lbfgs_optimize(x,
+                            fx,
+                            cost_function,
+                            nullptr,
+                            monitor_progress,
+                            &data,
+                            params);
+        
+        if(ret >= 0) opt.set_x(x);
+        std::cerr << lbfgs::lbfgs_strerror(ret) << std::endl;
+        if(ret == lbfgs::LBFGSERR_INVALID_FUNCVAL) 
+            std::cerr << x.transpose() << std::endl;
         traj = minco;
     }
 
@@ -62,13 +66,13 @@ struct optdata
     const std::vector<Eigen::Vector3f>& ref_path;
 };
 
-static int monitor_progress(void *instance,
+static int monitor_progress(void *,
                                const Eigen::VectorXf &x,
                                const Eigen::VectorXf &g,
                                const float fx,
-                               const float step,
+                               const float,
                                const int k,
-                               const int ls)
+                               const int )
 {
     std::cout << std::setprecision(4)
                 << "================================" << std::endl
@@ -102,13 +106,13 @@ void check_point(
     const std::vector<Eigen::Vector3f>& ref_path,
     optimizable::MincoOpt* opt){
 
-    if(map_.check_point_d(p) == IMap::State::Safe) return;
+    if(map_.check_point_d(p) != IMap::State::Unsafe) return;
     Eigen::Vector3f g{};
     
     float l;
     point_line_dis_squared(p, ref_path[i], ref_path[i + 1], l, g);
-    opt->add_j(l);
-    opt->add_g(ratio, i,g);
+    opt->add_j(l * distance_weight_) ;
+    opt->add_g(ratio, i,g * distance_weight_);
 }
 void point_line_dis_squared(const Eigen::Vector3f& p, const Eigen::Vector3f& a, const Eigen::Vector3f& b, float& l, Eigen::Vector3f& g){
     Eigen::Vector3f u = b - a; 
@@ -117,9 +121,10 @@ void point_line_dis_squared(const Eigen::Vector3f& p, const Eigen::Vector3f& a, 
     float proj = ap.dot(u_norm);
     Eigen::Vector3f n = proj * u_norm - ap;
     l = n.squaredNorm();
-    g = 2 * n;
+    g = 2 * n.normalized();
 }
 const TMap& map_;
+const float distance_weight_ = 100.0f;
 };
 
 CLASS()::MiddleEnd(const TMap& map){
