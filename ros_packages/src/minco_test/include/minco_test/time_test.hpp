@@ -6,6 +6,7 @@
 #include <string>
 class TimeTest{
 public:
+TimeTest(int max):max_(max){}
     inline void Begin(){
         t_ = std::chrono::steady_clock::now();
     }
@@ -21,14 +22,15 @@ public:
     }
     inline bool Log(std::string& str_out){
         auto epsilon = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - t2_);
-        if(epsilon.count() < 1) return false;
-        str_out = std::format("Avg:{}, window size:{}", seconds / window_, window_);
+        if(epsilon.count() < max_) return false;
+        str_out = std::format("Avg:{}s , window size:{}", seconds / window_, window_);
         t2_ = std::chrono::steady_clock::now();
         return true;
     }
 private:
     int window_ = 0;
     float seconds = 0;
+    const float max_ = 1;
     std::chrono::steady_clock::time_point t_ = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point t2_ = std::chrono::steady_clock::now();
 };

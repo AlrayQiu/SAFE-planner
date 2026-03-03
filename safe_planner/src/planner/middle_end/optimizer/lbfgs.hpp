@@ -197,9 +197,9 @@ namespace lbfgs
      *                      the gradient values for the current variables.
      *  @retval double      The value of the cost function for the current variables.
      */
-    typedef float (*lbfgs_evaluate_t)(void *instance,
-                                       const Eigen::VectorXf &x,
-                                       Eigen::VectorXf &g);
+    typedef double (*lbfgs_evaluate_t)(void *instance,
+                                       const Eigen::VectorXd &x,
+                                       Eigen::VectorXd &g);
 
     /**
      * Callback interface to provide an upper bound at the beginning of the current line search.
@@ -218,9 +218,9 @@ namespace lbfgs
      *  @retval double      The upperboud of the step in current line search routine,
      *                      such that (stpbound * d) is the maximum reasonable step.
      */
-    typedef float (*lbfgs_stepbound_t)(void *instance,
-                                        const Eigen::VectorXf &xp,
-                                        const Eigen::VectorXf &d);
+    typedef double (*lbfgs_stepbound_t)(void *instance,
+                                        const Eigen::VectorXd &xp,
+                                        const Eigen::VectorXd &d);
 
     /**
      * Callback interface to monitor the progress of the minimization process.
@@ -240,10 +240,10 @@ namespace lbfgs
      *                      non-zero value will cancel the minimization process.
      */
     typedef int (*lbfgs_progress_t)(void *instance,
-                                    const Eigen::VectorXf &x,
-                                    const Eigen::VectorXf &g,
-                                    const float fx,
-                                    const float step,
+                                    const Eigen::VectorXd &x,
+                                    const Eigen::VectorXd &g,
+                                    const double fx,
+                                    const double step,
                                     const int k,
                                     const int ls);
 
@@ -273,13 +273,13 @@ namespace lbfgs
      *      via quasi-Newton methods. Mathematical Programming, Vol 141, 
      *      No 1, pp. 135-163, 2013.
      */
-    inline int line_search_lewisoverton(Eigen::VectorXf &x,
+    inline int line_search_lewisoverton(Eigen::VectorXd &x,
                                         double &f,
-                                        Eigen::VectorXf &g,
+                                        Eigen::VectorXd &g,
                                         double &stp,
-                                        const Eigen::VectorXf &s,
-                                        const Eigen::VectorXf &xp,
-                                        const Eigen::VectorXf &gp,
+                                        const Eigen::VectorXd &s,
+                                        const Eigen::VectorXd &xp,
+                                        const Eigen::VectorXd &gp,
                                         const double stpmin,
                                         const double stpmax,
                                         const callback_data_t &cd,
@@ -315,6 +315,7 @@ namespace lbfgs
             x = xp + stp * s;
 
             /* Evaluate the function and gradient values. */
+            // std::cerr << stp << ' ';
             f = cd.proc_evaluate(cd.instance, x, g);
             ++count;
 
@@ -326,6 +327,7 @@ namespace lbfgs
             /* Check the Armijo condition. */
             if (f > finit + stp * dgtest)
             {
+                // std::cerr << "armijo" << f - finit - stp * dgtest << std::endl;
                 nu = stp;
                 brackt = true;
             }
@@ -334,6 +336,7 @@ namespace lbfgs
                 /* Check the weak Wolfe condition. */
                 if (g.dot(s) < dstest)
                 {
+                    // std::cerr << "wolfe " << g.dot(s) << ' ' << dstest << std::endl;
                     mu = stp;
                 }
                 else
@@ -431,8 +434,8 @@ namespace lbfgs
      *                          integer if the minimization process terminates without 
      *                          an error. A negative integer indicates an error.
      */
-    inline int lbfgs_optimize(Eigen::VectorXf &x,
-                              float &f,
+    inline int lbfgs_optimize(Eigen::VectorXd &x,
+                              double &f,
                               lbfgs_evaluate_t proc_evaluate,
                               lbfgs_stepbound_t proc_stepbound,
                               lbfgs_progress_t proc_progress,
@@ -495,17 +498,17 @@ namespace lbfgs
         }
 
         /* Prepare intermediate variables. */
-        Eigen::VectorXf xp(n);
-        Eigen::VectorXf g(n);
-        Eigen::VectorXf gp(n);
-        Eigen::VectorXf d(n);
-        Eigen::VectorXf pf(std::max(1, param.past));
+        Eigen::VectorXd xp(n);
+        Eigen::VectorXd g(n);
+        Eigen::VectorXd gp(n);
+        Eigen::VectorXd d(n);
+        Eigen::VectorXd pf(std::max(1, param.past));
 
         /* Initialize the limited memory. */
-        Eigen::VectorXf lm_alpha = Eigen::VectorXf::Zero(m);
-        Eigen::MatrixXf lm_s = Eigen::MatrixXf::Zero(n, m);
-        Eigen::MatrixXf lm_y = Eigen::MatrixXf::Zero(n, m);
-        Eigen::VectorXf lm_ys = Eigen::VectorXf::Zero(m);
+        Eigen::VectorXd lm_alpha = Eigen::VectorXd::Zero(m);
+        Eigen::MatrixXd lm_s = Eigen::MatrixXd::Zero(n, m);
+        Eigen::MatrixXd lm_y = Eigen::MatrixXd::Zero(n, m);
+        Eigen::VectorXd lm_ys = Eigen::VectorXd::Zero(m);
 
         /* Construct a callback data. */
         callback_data_t cd;

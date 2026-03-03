@@ -1,76 +1,77 @@
 #include "safe_planner/planner/middle_end.hpp"
-#include "optimizer/minco.hpp"
+#include "optimizer/minco_opt.hpp"
+#include "safe_planner/esdf/implicit_esdf.hpp"
 #include "safe_planner/map/imap.hpp"
 #include "safe_planner/map/rog_map.hpp"
-#include "safe_planner/trajectory/minco.hpp"
-#include "optimizer/lbfgs.hpp"
+#include "safe_planner/trajectory/bspline.hpp"
+#include "trajectory/uniform_bspline_impl.hpp"
+#include <memory>
 #include <vector>
 
 namespace safe_planner::planner{
 
-#define CLASS(x)  template<class TMap, class TTraj> \
-               requires std::derived_from<TMap, IMap> && std::derived_from<TTraj, ITrajectory> \
-               x MiddleEnd<TMap, TTraj>
+#define CLASS(x)  template<class TMap> \
+               requires std::derived_from<TMap, IMap>\
+               x MiddleEnd<TMap>
 
 
 CLASS(class)::Impl
 {
 public:
-Impl(const TMap& map)
+Impl(const TMap& map, const esdf::ImplicitESDF<TMap>& esdf)
 : map_(map)
+, esdf_(esdf)
 {}
 void optimize(
-    const std::vector<Eigen::Vector3f>& ref_path,
-    const Eigen::Matrix<float,2,3>& begin_va,
-    const Eigen::Matrix<float,2,3>& end_va,
-    TTraj& traj){
-        std::vector<trajectory::Minco::seconds> control_seconds(ref_path.size());
-        for(size_t i = 0; i < control_seconds.size(); ++i){
-            control_seconds[i] = trajectory::Minco::seconds{i};
-        }
-        trajectory::Minco minco(ref_path,control_seconds,begin_va,end_va);
-        optimizable::MincoOpt opt(minco);
-        Eigen::VectorXf x;
-        opt.init_x(x);
-        float fx;
-        /* Set the minimization parameters */
-        lbfgs::lbfgs_parameter_t params;
-        params.g_epsilon = 1.0e-8;
-        params.past = 5;
-        params.delta = 1.0e-8;
-        params.max_iterations = 50;
-        optdata data{this, &opt, ref_path};
-        /* Start minimization */
-        auto ret = lbfgs::lbfgs_optimize(x,
-                            fx,
-                            cost_function,
-                            nullptr,
-                            monitor_progress,
-                            &data,
-                            params);
-        
-        if(ret >= 0) opt.set_x(x);
-        std::cerr << lbfgs::lbfgs_strerror(ret) << std::endl;
-        if(ret == lbfgs::LBFGSERR_INVALID_FUNCVAL) 
-            std::cerr << x.transpose() << std::endl;
-        traj = minco;
+    const std::vector<Eigen::Vector3d>& ref_path,
+    const Eigen::Matrix<double,3,2>& begin_va,
+    const Eigen::Matrix<double,3,2>& end_va,
+    trajectory::UniformBSpline& traj){
+        trajectory::impl::UniformBSplineImpl urbs{ref_path,begin_va,end_va};
+        urbs.build(traj);
+        // middle_end::optimizer::MincoOpt<TMap> opt{minco_,esdf_, map_};
+        // Eigen::VectorXd x;
+        // double fx;
+        // opt.init_x(x);
+        // lbfgs::lbfgs_parameter_t params;
+        // params.mem_size = 256;
+        // params.g_epsilon = 1.0e-8;
+        // params.past = 5;
+        // params.delta = 1.0e-5;
+        // params.max_linesearch = 50;
+        // params.max_iterations = 100;
+        // params.f_dec_coeff = 1e-10;
+        // optdata data{this, &opt};
+        // /* Start minimization */
+        // auto ret = lbfgs::lbfgs_optimize(x,
+        //                     fx,
+        //                     cost_function,
+        //                     nullptr,
+        //                     nullptr,
+        //                     &data,
+        //                     params);
+        // opt.set_x(x);
+        // minco_.build(traj);
+        // std::cerr << lbfgs::lbfgs_strerror(ret) << std::endl;
     }
-
+void test_optimizer(
+    trajectory::MultiPoly& ,
+    std::vector<Eigen::Vector3d>& ){
+}
 private:
 
 
 struct optdata
 {
-    MiddleEnd<TMap, TTraj>::Impl* instance;
+    MiddleEnd<TMap>::Impl* instance;
     void* opt;
-    const std::vector<Eigen::Vector3f>& ref_path;
 };
 
 static int monitor_progress(void *,
-                               const Eigen::VectorXf &x,
-                               const Eigen::VectorXf &g,
-                               const float fx,
-                               const float,
+                               const Eigen::VectorXd &x,
+                               const Eigen::VectorXd &g,
+                               const double fx,
+                               const double,
                                const int k,
                                const int )
 {
@@ -83,63 +84,43 @@ static int monitor_progress(void *,
                 << x.transpose() << std::endl;
     return 0;
 }
-static float cost_function(void *instance,
-                               const Eigen::VectorXf &x,
-                               Eigen::VectorXf &grad)
+
+static double cost_function(void *instance,
+                               const Eigen::VectorXd &x,
+                               Eigen::VectorXd &grad)
 {
-    optdata* data = static_cast<optdata*>(instance);
-    auto opt = static_cast<optimizable::MincoOpt*>(data->opt);
+    auto data = static_cast<optdata*>(instance);
+    auto opt = static_cast<middle_end::optimizer::MincoOpt<TMap>*>(data->opt);
+
+    double j;
     opt->set_x(x);
-    opt->clear_j_g();
-    opt->enum_p(0.05,[&](const int i, const float ratio, const Eigen::Vector3f& p){
-        data->instance->check_point(i, ratio,p,data->ref_path,opt);
-    });
-    opt->get_g(x, grad);
-    float j;
+    opt->get_g(grad);
     opt->get_j(j);
     return j;
-        
-}
-void check_point(
-    const int i, const float& ratio,
-    const Eigen::Vector3f& p, 
-    const std::vector<Eigen::Vector3f>& ref_path,
-    optimizable::MincoOpt* opt){
-
-    if(map_.check_point_d(p) != IMap::State::Unsafe) return;
-    Eigen::Vector3f g{};
-    
-    float l;
-    point_line_dis_squared(p, ref_path[i], ref_path[i + 1], l, g);
-    opt->add_j(l * distance_weight_) ;
-    opt->add_g(ratio, i,g * distance_weight_);
-}
-void point_line_dis_squared(const Eigen::Vector3f& p, const Eigen::Vector3f& a, const Eigen::Vector3f& b, float& l, Eigen::Vector3f& g){
-    Eigen::Vector3f u = b - a; 
-    Eigen::Vector3f u_norm = u.normalized(); 
-    Eigen::Vector3f ap = p - a; 
-    float proj = ap.dot(u_norm);
-    Eigen::Vector3f n = proj * u_norm - ap;
-    l = n.squaredNorm();
-    g = 2 * n.normalized();
 }
 const TMap& map_;
-const float distance_weight_ = 100.0f;
+const esdf::ImplicitESDF<TMap>& esdf_;
 };
 
-CLASS()::MiddleEnd(const TMap& map){
-    impl_ = std::make_unique<Impl>(map);
+CLASS()::MiddleEnd(const TMap& map, const esdf::ImplicitESDF<TMap>& esdf){
+    impl_ = std::make_unique<Impl>(map, esdf);
 }
 
 CLASS()::~MiddleEnd() = default;
 
 CLASS(void)::optimize(
-    const std::vector<Eigen::Vector3f>& ref_path,
-    const Eigen::Matrix<float,2,3>& begin_va,
-    const Eigen::Matrix<float,2,3>& end_va,
-    TTraj& traj){
+    const std::vector<Eigen::Vector3d>& ref_path,
+    const Eigen::Matrix<double,3,2>& begin_va,
+    const Eigen::Matrix<double,3,2>& end_va,
+    trajectory::UniformBSpline& traj){
         impl_->optimize(ref_path, begin_va, end_va, traj);
 }
+CLASS(void)::test_optimizer(
+        trajectory::MultiPoly& traj,
+        std::vector<Eigen::Vector3d>& gradients){
+            impl_->test_optimizer(traj, gradients);
+        }
 
-template class MiddleEnd<safe_planner::map::ROGMap, safe_planner::planner::trajectory::Minco>;
+template class MiddleEnd<safe_planner::map::ROGMap>;
+// template class MiddleEnd<safe_planner::map::ROGMap, safe_planner::planner::trajectory::MincoTest>;
 }
