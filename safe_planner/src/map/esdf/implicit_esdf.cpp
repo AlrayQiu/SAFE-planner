@@ -1,5 +1,6 @@
 #include "safe_planner/esdf/implicit_esdf.hpp"
 #include "safe_planner/map/rog_map.hpp"
+#include <limits>
 #include <numbers>
 
 #define CLASS(x)  template<class TMap> \
@@ -52,18 +53,24 @@ void search_for_negative(const Eigen::Vector3f& pos,const float init_guess_radiu
         }
         if(flag) b = ra;
         else    r = ra;
-    }while(std::abs(r - b) > resolution * 0.1);
+    }while(std::abs(r - b) > resolution * 0.2);
 
     sample_.clear();
     g.setZero();
+    Eigen::Vector3f id;
     Eigen::Vector3f one_point{}; 
     sample_sphere(pos, r, resolution, sample_);
+    float min = std::numeric_limits<float>::max();
     for(const auto& p : sample_){
-        if(map_.check_point_d(p) == IMap::State::Safe){
+        if(map_.check_point_d(p) != IMap::State::Safe){
             continue;
         }
-        g = p - pos;
-        return;
+        map_.pos_to_grid(p,id);
+        const auto l = (id - pos).norm();
+        if(l >= min) continue;
+        min = l;
+        g = id;
+
     }
 }
 static void sample_sphere(

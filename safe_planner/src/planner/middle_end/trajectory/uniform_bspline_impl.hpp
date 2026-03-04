@@ -1,6 +1,9 @@
 #pragma once
 #include "safe_planner/trajectory/bspline.hpp"
 #include <Eigen/Eigen>
+#include <Eigen/src/LU/FullPivLU.h>
+#include <Eigen/src/LU/PartialPivLU.h>
+#include <iostream>
 #include <vector>
 namespace safe_planner::planner::trajectory::impl{
 class UniformBSplineImpl{
@@ -33,45 +36,62 @@ inline UniformBSplineImpl(
     
     points.erase(points.begin());
     points.pop_back();
-    inner_points_count_ = points.size();
-    set_param(points);
-}
+    inner_points_count_ = std::max<int>(points.size(),0);
+    segment_count_ = points.size() + 3;
+    control_points_count_ = points.size() + 6;
 
-const double init_min_distance_ = 0.01;
-const double init_step_distance_ = 1;
+    
+    M_.setZero(control_points_count_,control_points_count_);
+    M_.block<1,4>(0,0) = UniformBSpline::P0;
+    for(int i = 0;i < inner_points_count_;i++){
+        M_.block<1,4>(3 + i, i + 2) = UniformBSpline::P0;
+    }
+    M_.block<1,4>(3 + inner_points_count_, inner_points_count_ + 2) = UniformBSpline::Pt;
+    lu_.compute(M_);
+
+    set_param(points, 1);
+}
+int segment_count_;
+int inner_points_count_ = 0;
+int control_points_count_;
+
+double t_ = 1;
 
 Eigen::Matrix3d head_;
 Eigen::Matrix3d tail_;
 
-Eigen::MatrixX3d Q_;
 
-void build(UniformBSpline& spline){
-    spline.set_param(Q_, 1);
+Eigen::MatrixX3d Q_;
+Eigen::MatrixXd M_;
+Eigen::FullPivLU<Eigen::MatrixXd> lu_;
+
+inline void build(UniformBSpline& spline){
+    spline.set_param(Q_, t_);
 }
 
-private:
-void set_param(const std::vector<Eigen::Vector3d>& inner_points){
-    Q_.setZero(inner_points_count_ + 6,3);
-    M_.setZero(inner_points_count_ + 6,inner_points_count_ + 6);
-    M_.block<1,4>(0,0) = UniformBSpline::P0;
-    M_.block<1,4>(1,0) = UniformBSpline::V0;
-    M_.block<1,4>(2,0) = UniformBSpline::A0;
+inline void set_param(const std::vector<Eigen::Vector3d>& inner_points,const double t){
+    Q_.setZero(control_points_count_,3);
     Q_.block<3,3>(0,0) = head_.transpose();
 
     for(int i = 0;i < inner_points_count_;i++){
-        M_.block<1,4>(3 + i, i + 2) = UniformBSpline::P0;
         Q_.row(3 + i) = inner_points[i].transpose();
     }
-    M_.block<1,4>(3 + inner_points_count_, inner_points_count_ + 2) = UniformBSpline::Pt;
-    M_.block<1,4>(4 + inner_points_count_, inner_points_count_ + 2) = UniformBSpline::Vt;
-    M_.block<1,4>(5 + inner_points_count_, inner_points_count_ + 2) = UniformBSpline::At;
     Q_.block<3,3>(3 + inner_points_count_, 0) = tail_.transpose();
-    Q_ = M_.fullPivLu().solve(Q_);
+    t_ = t;
+    const auto t1 = t;
+    const auto t2 = t1 * t1;
+    M_.block<1,4>(1,0) = UniformBSpline::V0 / t1;
+    M_.block<1,4>(2,0) = UniformBSpline::A0 / t2;
+    M_.block<1,4>(4 + inner_points_count_, inner_points_count_ + 2) = UniformBSpline::Vt / t1;
+    M_.block<1,4>(5 + inner_points_count_, inner_points_count_ + 2) = UniformBSpline::At / t2;
+    lu_.compute(M_);
+    Q_ = lu_.solve(Q_);
     // std::cerr << M_.fullPivLu().rank() << " " << M_.rows() << std::endl;
 } 
 
-int inner_points_count_ = 0;
+private:
+const double init_min_distance_ = 0.01;
+const double init_step_distance_ = 1;
 
-Eigen::MatrixXd M_;
 };
 }

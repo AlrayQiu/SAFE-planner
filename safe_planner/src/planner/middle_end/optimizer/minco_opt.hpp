@@ -29,7 +29,7 @@ inline void init_x(Eigen::VectorXd& x) const
         x.segment<3>(i * 3) = minco_.poly_.b_.row(6 * (i + 1)).transpose();
     }
     for(int i = 0;i < minco_.pieces_num_;++i){
-        x(i + minco_.inner_points_count_ * 3) = minco_.poly_.t1_(i);
+        x(i + minco_.inner_points_count_ * 3) = t_to_tau(minco_.poly_.t1_(i));
     }
 }
 

@@ -17,7 +17,7 @@ double t2_;
 double t3_;
 std::tuple<int,double> get_s(const seconds t) const{
     auto c = std::upper_bound(time_.begin(),time_.end(),t) - 1;
-    auto s = (t - *c).count();
+    auto s = (t - *c).count() / ((c + 1)->count() - c->count());
     auto i = std::distance(time_.begin(),c);
     return {i,s};
 }
@@ -85,5 +85,6 @@ static inline const Eigen::RowVector4d V0{-3./6., 0, 3./6., 0};
 static inline const Eigen::RowVector4d Vt{0,-3./6., 0, 3./6.};
 static inline const Eigen::RowVector4d A0{1, -2, 1, 0};
 static inline const Eigen::RowVector4d At{0, 1, -2, 1};
+static inline const Eigen::RowVector4d J{-1, 3, -3, 1};
 };
 }

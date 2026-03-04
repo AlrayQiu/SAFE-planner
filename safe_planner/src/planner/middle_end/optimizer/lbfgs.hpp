@@ -4,6 +4,7 @@
 #include <Eigen/Eigen>
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 namespace lbfgs
 {
@@ -327,7 +328,6 @@ namespace lbfgs
             /* Check the Armijo condition. */
             if (f > finit + stp * dgtest)
             {
-                // std::cerr << "armijo" << f - finit - stp * dgtest << std::endl;
                 nu = stp;
                 brackt = true;
             }

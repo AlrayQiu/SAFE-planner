@@ -51,6 +51,8 @@ public:
     void get_occupied_points(pcl::PointCloud<pcl::PointXYZI> &out_points) const;
     void get_local_scale(Eigen::Vector3f& position, Eigen::Vector3f& map_min, Eigen::Vector3f& map_max) const;
 
+    void pos_to_grid(const Eigen::Vector3f &pos, Eigen::Vector3f &index) const;
+
     State check_line_i(const Eigen::Vector3i& from, const Eigen::Vector3i& to) const;
     State check_line_d(const Eigen::Vector3f& from, const Eigen::Vector3f& to) const;
     State check_point_i (const Eigen::Vector3i& index) const;

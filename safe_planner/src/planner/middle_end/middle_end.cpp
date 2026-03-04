@@ -1,5 +1,6 @@
 #include "safe_planner/planner/middle_end.hpp"
-#include "optimizer/minco_opt.hpp"
+#include "optimizer/lbfgs.hpp"
+#include "optimizer/parameterized_urbs_optmizer.hpp"
 #include "safe_planner/esdf/implicit_esdf.hpp"
 #include "safe_planner/map/imap.hpp"
 #include "safe_planner/map/rog_map.hpp"
@@ -28,31 +29,32 @@ void optimize(
     const Eigen::Matrix<double,3,2>& end_va,
     trajectory::UniformBSpline& traj){
         trajectory::impl::UniformBSplineImpl urbs{ref_path,begin_va,end_va};
-        urbs.build(traj);
-        // middle_end::optimizer::MincoOpt<TMap> opt{minco_,esdf_, map_};
-        // Eigen::VectorXd x;
-        // double fx;
-        // opt.init_x(x);
-        // lbfgs::lbfgs_parameter_t params;
-        // params.mem_size = 256;
-        // params.g_epsilon = 1.0e-8;
-        // params.past = 5;
-        // params.delta = 1.0e-5;
-        // params.max_linesearch = 50;
-        // params.max_iterations = 100;
-        // params.f_dec_coeff = 1e-10;
-        // optdata data{this, &opt};
+        middle_end::optimizer::ParameterizedUrbsOpt<TMap> opt(urbs,esdf_,map_);
+        Eigen::VectorXd x;
+        double fx;
+        opt.init_x(x);
+        lbfgs::lbfgs_parameter_t params;
+        params.mem_size = 256;
+        params.g_epsilon = 1.0e-8;
+        params.past = 5;
+        params.delta = 1.0e-6;
+        params.max_iterations = 200;
+        optdata data{this, &opt};
         // /* Start minimization */
-        // auto ret = lbfgs::lbfgs_optimize(x,
-        //                     fx,
-        //                     cost_function,
-        //                     nullptr,
-        //                     nullptr,
-        //                     &data,
-        //                     params);
-        // opt.set_x(x);
-        // minco_.build(traj);
-        // std::cerr << lbfgs::lbfgs_strerror(ret) << std::endl;
+        if(x.size() <= 1){
+            urbs.build(traj);
+            return;
+        }
+        auto ret = lbfgs::lbfgs_optimize(x,
+                            fx,
+                            cost_function,
+                            nullptr,
+                            nullptr,
+                            &data,
+                            params);
+        opt.set_x(x);
+        urbs.build(traj);
+        std::cerr << lbfgs::lbfgs_strerror(ret) << std::endl;
     }
 void test_optimizer(
     trajectory::MultiPoly& ,
@@ -90,7 +92,7 @@ static double cost_function(void *instance,
                                Eigen::VectorXd &grad)
 {
     auto data = static_cast<optdata*>(instance);
-    auto opt = static_cast<middle_end::optimizer::MincoOpt<TMap>*>(data->opt);
+    auto opt = static_cast<middle_end::optimizer::ParameterizedUrbsOpt<TMap>*>(data->opt);
 
     double j;
     opt->set_x(x);
