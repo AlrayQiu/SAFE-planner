@@ -3,8 +3,8 @@
 #include "sliding_map.hpp"
 #include "occupancy_grid_map.hpp"
 
-#include "utils/math.hpp"
-#include "utils/raycaster.hpp"
+#include "../utils/math.hpp"
+#include "../utils/raycaster.hpp"
 
 #include "pcl/point_types.h"
 #include "pcl/point_cloud.h"
@@ -17,8 +17,6 @@
 namespace safe_planner::map {
 using namespace rog_map;
 using namespace occupancy_grid_map;
-
-static const CenterPosition center_position = utils::math::cell::CenterPosition::center_in_center;
 
 class ROGMapMemory final : public rog_map::ICellMemoryReseter
 {
@@ -159,14 +157,14 @@ public:
     }
 
     State check_point_i(const Eigen::Vector3i& i){
-        if(!sliding_map_.inside_local_map(i)) return IMap::State::Safe;
+        if(!sliding_map_.inside_local_map(i)) return IMap::State::Unsafe;
         if(inf_map_.is_occupied(sliding_map_.get_hash_id_from_global_index(i)))
             return IMap::State::Unsafe;
         return IMap::State::Safe;
     }
     
     State check_point_d(const Eigen::Vector3f& p){
-        if(!sliding_map_.inside_local_map(p)) return IMap::State::Safe;
+        if(!sliding_map_.inside_local_map(p)) return IMap::State::Unsafe;
         if(inf_map_.is_occupied(sliding_map_.get_hash_index_from_pos(p)))
             return IMap::State::Unsafe;
 
@@ -437,5 +435,13 @@ void ROGMap::pos_to_grid(const Vector3f &pos, Vector3f&index) const{
     impl_->sliding_map_.pos_to_global_index(pos,i);
     impl_->sliding_map_.global_index_to_pos(i, index);
 
+}
+
+void ROGMap::index_to_pos(const Vector3i &index, Vector3f& pos) const{
+    impl_->sliding_map_.global_index_to_pos(index, pos);
+}
+
+void ROGMap::pos_to_index(const Vector3f &index, Vector3i& pos) const{
+    impl_->sliding_map_.pos_to_global_index(index, pos);
 }
 }

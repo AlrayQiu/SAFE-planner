@@ -9,11 +9,11 @@
  * Paper link: https://doi.org/10.1109/IROS58592.2024.10802303
  */
 #pragma once
-
+#include "safe_planner/map/imap.hpp"
 #include <Eigen/Eigen>
 #include <iostream>
 
-#include "utils/math.hpp"
+#include "../utils/math.hpp"
 
 namespace safe_planner::map::rog_map {
 
@@ -25,7 +25,7 @@ public:
 
 using namespace Eigen;
 using namespace utils::math;
-using namespace utils::math::cell;
+using namespace cell;
 template<class T, CenterPosition center = CenterPosition::center_in_cornor> 
 requires std::derived_from<T, ICellMemoryReseter>
 class SlidingMap{

@@ -14,9 +14,10 @@
 #include <stdexcept>
 
 #include "math.hpp"
+#include "safe_planner/map/imap.hpp"
 
 namespace safe_planner::map::utils::raycaster {
-using namespace math::cell;
+using namespace cell;
 template <CenterPosition center = CenterPosition::center_in_cornor>
 class Raycaster {
 public:

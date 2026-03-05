@@ -1,7 +1,10 @@
 #include "safe_planner/esdf/implicit_esdf.hpp"
+#include "safe_planner/map/imap.hpp"
 #include "safe_planner/map/rog_map.hpp"
+#include "../utils/raycaster.hpp"
+#include <Eigen/src/Core/Matrix.h>
+#include <array>
 #include <limits>
-#include <numbers>
 
 #define CLASS(x)  template<class TMap> \
                requires std::derived_from<TMap, safe_planner::IMap> \
@@ -12,95 +15,69 @@ public:
 Impl(const TMap& map, const float resolution)
 : map_(map)
 , resolution(resolution)
-{};
+, ray_caster_(resolution)
+{ };
 
-std::tuple<float,Eigen::Vector3f> get_esdf(const Eigen::Vector3f& pos, const float init_guess_radius){
-    Eigen::Vector3f g{};
-    search_for_negative(pos, init_guess_radius, g);
-    return {g.norm(), g.normalized()};
+std::tuple<float,Eigen::Vector3f> get_esdf(const Eigen::Vector3f& pos, const float , const Eigen::Vector3f&){
+    const int r = N / 2;
+    Eigen::Vector3i index,g;
+    Eigen::Vector3f p;
+    map_.pos_to_index(pos, index);
+    float min = std::numeric_limits<float>::max();
+    for(int i = 0;i < N;++i)
+    for(int j = 0;j < N;++j)
+    for(int k = 0;k < N;++k)
+    {
+        const Eigen::Vector3i err{i - r,j - r,k - r};
+        const auto n = err + index;
+        if(map_.check_point_i(n) != IMap::State::Safe) continue;
+        double d = distance_matrix[i][j][k];
+        if(min <= d) continue;
+        min = d;
+        g = n;
+    }
+        ;
+    if(min == std::numeric_limits<float>::max())
+        return{0,Eigen::Vector3f::Zero()};
+    map_.index_to_pos(g,p);
+    p = pos - p;
+    if(p.norm() < resolution)
+        return{0,Eigen::Vector3f::Zero()};
+    p = (p - p.normalized() * resolution);
+    return {p.norm(),p.normalized()};
 }
 private:
 
-void search_for_negative(const Eigen::Vector3f& pos,const float init_guess_radius, Eigen::Vector3f& g){
-    auto r = init_guess_radius == 0.0f ? resolution : init_guess_radius;
-    auto b = 0.0f;
-    bool flag = true;
-    do{
-        sample_top_.clear();
-        sample_sphere(pos, r, resolution, sample_top_);
-        for(const auto& p : sample_top_){
-            if(map_.check_point_d(p) == IMap::State::Safe){
-                flag = false;
-                break;
-            }
-        }
-        if(flag){
-            b = r;
-            r *= 2;
-        }
-    }while(flag);
+static inline const int N = 11;
 
-    do{
-        auto ra = (r + b) / 2;
-        sample_.clear();
-        sample_sphere(pos, ra, resolution, sample_);
-        flag = true;
-        for(const auto& p : sample_){
-            if(map_.check_point_d(p) == IMap::State::Safe){
-                flag = false;
-                break;
-            }
-        }
-        if(flag) b = ra;
-        else    r = ra;
-    }while(std::abs(r - b) > resolution * 0.2);
-
-    sample_.clear();
-    g.setZero();
-    Eigen::Vector3f id;
-    Eigen::Vector3f one_point{}; 
-    sample_sphere(pos, r, resolution, sample_);
-    float min = std::numeric_limits<float>::max();
-    for(const auto& p : sample_){
-        if(map_.check_point_d(p) != IMap::State::Safe){
-            continue;
-        }
-        map_.pos_to_grid(p,id);
-        const auto l = (id - pos).norm();
-        if(l >= min) continue;
-        min = l;
-        g = id;
-
+// 定义一个 N×N 的矩阵，存储到中心的距离
+static inline const std::array<std::array<std::array<float, N>, N>, N> 
+distance_matrix = [] {
+    std::array<std::array<std::array<float, N>, N>, N> mat{};
+    const int cx = N / 2;
+    const int cy = N / 2;
+    const int cz = N / 2;
+    for (int i = 0; i < N; ++i) {
+    for (int j = 0; j < N; ++j) {
+    for (int k = 0; k < N; ++k) {
+        mat[i][j][k] = std::sqrt((i - cx) * (i - cx) + (j - cy) * (j - cy) + (k - cz) * (k - cz));
     }
-}
-static void sample_sphere(
-    const Eigen::Vector3f& center, 
-    const float radius, const float resolution,
-    std::vector<Eigen::Vector3f>& samples){
-    for(float p = - radius; p <= radius; p += resolution){
-        float r = std::sqrt(radius * radius - p * p);
-        sample_circle(center, p, r, resolution, samples);
     }
-}
-static void sample_circle(const Eigen::Vector3f& center,const float p,const float r,const float resolution,std::vector<Eigen::Vector3f>& samples){
-    for(float theta = -std::numbers::pi_v<float>; theta < std::numbers::pi_v<float>; theta += resolution / r){
-        samples.emplace_back(center.x() + r * std::cos(theta), center.y() + r * std::sin(theta), center.z() + p);
     }
-}
-std::vector<Eigen::Vector3f> sample_top_;
-std::vector<Eigen::Vector3f> sample_bottom_;
-std::vector<Eigen::Vector3f> sample_;
+    return mat;
+}();
 
 const TMap& map_;
 const float resolution;
+map::utils::raycaster::Raycaster<center_position> ray_caster_;
 };
 CLASS()::ImplicitESDF(const TMap& map, const float resolution){
     impl_ = std::make_unique<Impl>(map, resolution);
 }
 CLASS()::~ImplicitESDF() = default;
 typedef std::tuple<float,Eigen::Vector3f> ReturnType;
-CLASS(ReturnType)::get_esdf(const Eigen::Vector3f& pos, const float init_guess_radius) const{
-    return impl_->get_esdf(pos, init_guess_radius);
+CLASS(ReturnType)::get_esdf(const Eigen::Vector3f& pos, const float init_guess_radius, const Eigen::Vector3f& ref_pos) const{
+    return impl_->get_esdf(pos, init_guess_radius,ref_pos);
 }
 
 template class safe_planner::esdf::ImplicitESDF<safe_planner::map::ROGMap>;

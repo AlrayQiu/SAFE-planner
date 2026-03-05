@@ -33,11 +33,4 @@ static Eigen::Vector3f line_box_intersect_point(const Eigen::Vector3f &pt, const
     return pos + (min_t - 1e-3) * diff;
 }
 
-namespace cell {
-enum class CenterPosition : bool {
-    center_in_cornor = false,
-    center_in_center = true
-};
-
-}
 }

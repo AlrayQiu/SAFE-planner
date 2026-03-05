@@ -1,7 +1,6 @@
 #pragma once
 
 #include "occupancy_grid_map.hpp"
-#include "utils/math.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -11,7 +10,7 @@
 
 namespace safe_planner::map::rog_map {
 
-template <utils::math::cell::CenterPosition center = utils::math::cell::CenterPosition::center_in_cornor>
+template <cell::CenterPosition center = cell::CenterPosition::center_in_cornor>
 class InflationMap {
 public:
     inline InflationMap(const Eigen::Vector3i &half_map_size_i, const int inflation_radius)
@@ -49,7 +48,7 @@ public:
 private:
     inline constexpr std::vector<Eigen::Vector3i> calculate_inflation_core(const int inflation_radius){
         int radius = inflation_radius;
-        if constexpr(center == utils::math::cell::CenterPosition::center_in_center) ++radius;
+        if constexpr(center == cell::CenterPosition::center_in_center) ++radius;
         
         const int side = radius + inflation_radius; 
         const std::size_t count = static_cast<std::size_t>(side) 
