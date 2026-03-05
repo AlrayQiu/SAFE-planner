@@ -13,7 +13,7 @@
 #include "rclcpp/utilities.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "rrt_star_test/time_test.hpp"
+#include "front_end_test/time_test.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "pcl_conversions/pcl_conversions.h"
@@ -32,12 +32,12 @@ const std::string out_path_topic_name 	= "/front_end/path";
 
 const std::string frame_id 				= "car";
 
-class MincoTest : public rclcpp::Node {
+class FrontEndTest : public rclcpp::Node {
 public:
-  	MincoTest() 
-	: Node("rrt_star_test")
+  	FrontEndTest() 
+	: Node("front_end_test")
 	, map_({100,100,20}, 0.1, true, 1, {0,0,0}, {})
-	, front_end_(map_,{.algo = safe_planner::planner::front_end::Config::Algo::RRT})
+	, front_end_(map_,{.algo = safe_planner::planner::front_end::Config::Algo::JPS})
 	, sub_pcd_(
 		create_subscription<sensor_msgs::msg::PointCloud2>(
 		in_pcd_topic_name, 10, 
@@ -81,7 +81,7 @@ public:
 			tt_.End();
 			std::string info;
 			if(tt_.Log(info)){
-				RCLCPP_INFO(get_logger(),"[RRTStar Run] %s",info.c_str());
+				RCLCPP_INFO(get_logger(),"[JPS Run] %s",info.c_str());
 			}
 			nav_msgs::msg::Path path{};
 			path.header.frame_id = frame_id;
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
   	(void)argc;
   	(void)argv;
   	rclcpp::init(argc, argv);
-  	auto node = std::make_shared<MincoTest>();
+  	auto node = std::make_shared<FrontEndTest>();
   	rclcpp::spin(node);
   	rclcpp::shutdown();
 }

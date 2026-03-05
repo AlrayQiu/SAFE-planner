@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(rrt_star_test)
+project(front_end_test)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,11 +20,11 @@ find_package(ament_cmake_auto REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
 
 ament_auto_find_build_dependencies()
-ament_auto_add_executable(rrt_test src/rrt_star_test.cpp)
+ament_auto_add_executable(front_end_test src/front_end_test.cpp)
 
-target_include_directories(rrt_test PRIVATE 
+target_include_directories(front_end_test PRIVATE 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> 
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(rrt_test safe_planner)
+target_link_libraries(front_end_test safe_planner)
 
 ament_auto_package(USE_SCOPED_HEADER_INSTALL_DIR)

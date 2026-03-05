@@ -12,7 +12,7 @@
 #include "rclcpp/node.hpp"
 #include "rclcpp/utilities.hpp"
 
-#include "minco_test/time_test.hpp"
+#include "middle_end_test/time_test.hpp"
 
 #include "safe_planner/esdf/implicit_esdf.hpp"
 #include "safe_planner/planner/middle_end.hpp"
@@ -48,10 +48,10 @@ const std::string out_control_points_topic_name 	= "/middle_end/control_points";
 
 const std::string frame_id 				= "car";
 
-class MincoTest : public rclcpp::Node {
+class MiddleEndTest : public rclcpp::Node {
 public:
-  	MincoTest() 
-	: Node("minco_test")
+  	MiddleEndTest() 
+	: Node("middle_end_test")
 	, map_({200,200,20}, 0.1, true, 1, {0,0,0}, {})
 	, front_end_(map_,{.algo = safe_planner::planner::front_end::Config::Algo::RRT})
 	, esdf_(map_, 0.1)
@@ -273,7 +273,7 @@ int main(int argc, char **argv) {
   	(void)argc;
   	(void)argv;
   	rclcpp::init(argc, argv);
-  	auto node = std::make_shared<MincoTest>();
+  	auto node = std::make_shared<MiddleEndTest>();
   	rclcpp::spin(node);
   	rclcpp::shutdown();
 }

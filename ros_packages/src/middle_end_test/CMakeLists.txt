@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(minco_test)
+project(middle_end_test)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,11 +20,11 @@ find_package(ament_cmake_auto REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
 
 ament_auto_find_build_dependencies()
-ament_auto_add_executable(minco_test src/minco_test.cpp)
+ament_auto_add_executable(middle_end_test src/middle_end_test.cpp)
 
-target_include_directories(minco_test PRIVATE 
+target_include_directories(middle_end_test PRIVATE 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> 
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(minco_test safe_planner)
+target_link_libraries(middle_end_test safe_planner)
 
 ament_auto_package(USE_SCOPED_HEADER_INSTALL_DIR)
