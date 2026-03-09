@@ -22,7 +22,16 @@ std::tuple<int,double> get_s(const seconds t) const{
     return {i,s};
 }
 public:
+
+inline void control_point(std::vector<Eigen::Vector3d>& control){
+    if(!build) return;
+    control.clear();
+    for(int i = 0;i < Q_.rows();++i){
+        control.emplace_back(Q_.row(i).transpose());
+    }
+}
 inline void set_param(const Eigen::MatrixX3d& Q, const float& t){
+    build = true;
     Q_ = Q;
     time_.clear();
     auto st = seconds(t);
@@ -73,6 +82,7 @@ inline void get_time_range(seconds& from, seconds& to) const{
     from = *time_.begin();
     to = *time_.rbegin();
 };
+bool build = false;
 
 static inline const Eigen::Matrix4d M = (Eigen::Matrix4d() << 1./6., 4./6., 1./6., 0,
                                                              -3./6., 0    , 3./6 , 0,

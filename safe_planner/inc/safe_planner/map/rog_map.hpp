@@ -33,7 +33,7 @@ struct Config{
 };
 }
 
-class ROGMap final : public IMap
+class ROGMap final : public IGridMap
 {
 public:
     ROGMap() = delete;
@@ -52,6 +52,8 @@ public:
     void get_local_scale(Eigen::Vector3f& position, Eigen::Vector3f& map_min, Eigen::Vector3f& map_max) const;
 
     void pos_to_grid(const Eigen::Vector3f &pos, Eigen::Vector3f &index) const;
+    void index_to_pos(const Eigen::Vector3i &index, Eigen::Vector3f& pos) const;
+    void pos_to_index(const Eigen::Vector3f &index, Eigen::Vector3i& pos) const;
 
     State check_line_i(const Eigen::Vector3i& from, const Eigen::Vector3i& to) const;
     State check_line_d(const Eigen::Vector3f& from, const Eigen::Vector3f& to) const;
@@ -59,6 +61,7 @@ public:
     State check_point_d (const Eigen::Vector3f& pos)   const;
     void get_map_bound_i(Eigen::Vector3i& min,Eigen::Vector3i& max) const;
     void get_map_bound_d(Eigen::Vector3f& min,Eigen::Vector3f& max) const;
+    float resolution() const;
 private:  
     class ROGMapImpl;
     std::unique_ptr<ROGMapImpl> impl_;

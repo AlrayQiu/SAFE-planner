@@ -430,6 +430,10 @@ void ROGMap::get_map_bound_d(Eigen::Vector3f& min,Eigen::Vector3f& max) const{
     impl_->get_local_scale_d(min, max);
 }
 
+float ROGMap::resolution() const{
+    return impl_->sliding_map_.sliding_config_.resolution;
+}
+
 void ROGMap::pos_to_grid(const Vector3f &pos, Vector3f&index) const{
     Eigen::Vector3i i;
     impl_->sliding_map_.pos_to_global_index(pos,i);

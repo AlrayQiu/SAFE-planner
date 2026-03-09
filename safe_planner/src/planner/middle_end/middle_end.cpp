@@ -33,28 +33,38 @@ void optimize(
         Eigen::VectorXd x;
         double fx;
         opt.init_x(x);
+        
         lbfgs::lbfgs_parameter_t params;
-        params.mem_size = 256;
-        params.g_epsilon = 1.0e-8;
+        params.mem_size = 1024;
+        params.g_epsilon = 1.0e-5;
         params.past = 5;
-        params.delta = 1.0e-6;
-        params.max_iterations = 200;
+        params.delta = 1.0e-5;
+        params.max_iterations = 0;
+        params.max_linesearch = 64;
         optdata data{this, &opt};
         // /* Start minimization */
         if(x.size() <= 1){
             urbs.build(traj);
             return;
         }
-        auto ret = lbfgs::lbfgs_optimize(x,
+        int ret,iter = -1;
+        do{
+            ret = lbfgs::lbfgs_optimize(x,
                             fx,
                             cost_function,
                             nullptr,
                             nullptr,
                             &data,
                             params);
-        opt.set_x(x);
-        urbs.build(traj);
+            // std::cerr << lbfgs::lbfgs_strerror(ret) << std::endl;
+        }
+        while(ret < 0 && ++iter < 10);
         std::cerr << lbfgs::lbfgs_strerror(ret) << std::endl;
+        opt.set_x(x);
+        opt.get_g(x);
+        urbs.build(traj);
+        // std::cerr << x.norm() << ' ' <<x.transpose() << std::endl;
+        // if(ret >= 0) return;
     }
 void test_optimizer(
     trajectory::MultiPoly& ,

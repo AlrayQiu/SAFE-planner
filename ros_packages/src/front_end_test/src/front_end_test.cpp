@@ -34,10 +34,10 @@ const std::string frame_id 				= "car";
 
 class FrontEndTest : public rclcpp::Node {
 public:
-  	FrontEndTest() 
+  	FrontEndTest(safe_planner::planner::front_end::Config::Algo algo) 
 	: Node("front_end_test")
 	, map_({100,100,20}, 0.1, true, 1, {0,0,0}, {})
-	, front_end_(map_,{.algo = safe_planner::planner::front_end::Config::Algo::JPS})
+	, front_end_(map_,{.algo = safe_planner::planner::front_end::Config::Algo::RRT})
 	, sub_pcd_(
 		create_subscription<sensor_msgs::msg::PointCloud2>(
 		in_pcd_topic_name, 10, 
@@ -137,7 +137,11 @@ int main(int argc, char **argv) {
   	(void)argc;
   	(void)argv;
   	rclcpp::init(argc, argv);
-  	auto node = std::make_shared<FrontEndTest>();
+	safe_planner::planner::front_end::Config::Algo al = safe_planner::planner::front_end::Config::Algo::RRT;
+	for(int i =0;i < argc;++i)
+		if(strcmp(argv[i],"jps"))
+			al = safe_planner::planner::front_end::Config::Algo::JPS;
+  	auto node = std::make_shared<FrontEndTest>(al);
   	rclcpp::spin(node);
   	rclcpp::shutdown();
 }

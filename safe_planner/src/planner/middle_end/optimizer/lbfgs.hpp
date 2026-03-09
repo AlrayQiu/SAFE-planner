@@ -577,6 +577,7 @@ namespace lbfgs
                     g = gp;
                     ret = ls;
                     break;
+                    
                 }
 
                 /* Report the progress. */

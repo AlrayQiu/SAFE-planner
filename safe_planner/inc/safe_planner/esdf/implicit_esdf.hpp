@@ -11,7 +11,7 @@ public:
     ImplicitESDF() = delete;
     ImplicitESDF(const TMap& map, const float resolution);
     ~ImplicitESDF();
-    std::tuple<float,Eigen::Vector3f> get_esdf(const Eigen::Vector3f& pos, const float init_guess_radius) const;
+    std::tuple<float,Eigen::Vector3f> get_esdf(const Eigen::Vector3f& , const float ,const Eigen::Vector3f& ref_pos = Eigen::Vector3f::Zero()) const;
 private:
     class Impl;
     std::unique_ptr<Impl> impl_;

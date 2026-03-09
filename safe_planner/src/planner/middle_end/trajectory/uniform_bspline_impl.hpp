@@ -1,9 +1,7 @@
 #pragma once
 #include "safe_planner/trajectory/bspline.hpp"
 #include <Eigen/Eigen>
-#include <Eigen/src/LU/FullPivLU.h>
-#include <Eigen/src/LU/PartialPivLU.h>
-#include <iostream>
+#include <cmath>
 #include <vector>
 namespace safe_planner::planner::trajectory::impl{
 class UniformBSplineImpl{
@@ -11,18 +9,18 @@ public:
 inline UniformBSplineImpl(
     const std::vector<Eigen::Vector3d>& control_points, 
     const Eigen::Matrix<double,3,2>& head_va,
-    const Eigen::Matrix<double,3,2>& tail_va){
+    const Eigen::Matrix<double,3,2>& tail_va)
+    {
     head_.col(0) = *control_points.begin();
     head_.block<3,2>(0,1) = head_va;
     tail_.col(0) = *control_points.rbegin();
     tail_.block<3,2>(0,1) = tail_va;
 
-    static std::vector<Eigen::Vector3d> points; 
     points.clear();
     points.emplace_back(control_points[0]);
     
     for(int i = 1, l = control_points.size();i < l;++i){
-        const auto perr = control_points[i] - *points.rbegin();
+        const Eigen::Vector3d perr = control_points[i] - points.back();
         const auto dis = (perr).norm();
         if(dis < init_min_distance_)
             continue;
@@ -30,15 +28,16 @@ inline UniformBSplineImpl(
         const auto step = 1.0 / j;
         
         for(int k = 1;k <= j;++k){
-            points.emplace_back(*points.rbegin() + perr * step);
+            points.emplace_back(points.back() + perr * step);
         }
     }
     
     points.erase(points.begin());
     points.pop_back();
+    
     inner_points_count_ = std::max<int>(points.size(),0);
-    segment_count_ = points.size() + 3;
-    control_points_count_ = points.size() + 6;
+    segment_count_ = inner_points_count_ + 3;
+    control_points_count_ = inner_points_count_ + 6;
 
     
     M_.setZero(control_points_count_,control_points_count_);
@@ -47,7 +46,6 @@ inline UniformBSplineImpl(
         M_.block<1,4>(3 + i, i + 2) = UniformBSpline::P0;
     }
     M_.block<1,4>(3 + inner_points_count_, inner_points_count_ + 2) = UniformBSpline::Pt;
-    lu_.compute(M_);
 
     set_param(points, 1);
 }
@@ -63,7 +61,7 @@ Eigen::Matrix3d tail_;
 
 Eigen::MatrixX3d Q_;
 Eigen::MatrixXd M_;
-Eigen::FullPivLU<Eigen::MatrixXd> lu_;
+Eigen::PartialPivLU<Eigen::MatrixXd> lu_;
 
 inline void build(UniformBSpline& spline){
     spline.set_param(Q_, t_);
@@ -89,9 +87,11 @@ inline void set_param(const std::vector<Eigen::Vector3d>& inner_points,const dou
     // std::cerr << M_.fullPivLu().rank() << " " << M_.rows() << std::endl;
 } 
 
+std::vector<Eigen::Vector3d> points; 
+
 private:
 const double init_min_distance_ = 0.01;
-const double init_step_distance_ = 1;
+const double init_step_distance_ = 0.5;
 
 };
 }

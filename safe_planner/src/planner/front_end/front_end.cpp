@@ -1,4 +1,5 @@
 #include "rrt_star.hpp"
+#include "jps.hpp"
 #include "safe_planner/map/rog_map.hpp"
 #include "safe_planner/planner/front_end.hpp"
 
@@ -26,7 +27,10 @@ public:
     {
         if(config_.algo == front_end::Config::Algo::RRT) 
         {
-            rrt_star_search<TMap>(from, to, map, path);
+            rrt_star_search(from, to, map, path);
+        }else if(config_.algo == front_end::Config::Algo::JPS)
+        {
+            jps_search(from, to, map, path);
         }
         else throw std::runtime_error(std::format("config.algo no define with code {}", static_cast<int>(config_.algo))); 
     }

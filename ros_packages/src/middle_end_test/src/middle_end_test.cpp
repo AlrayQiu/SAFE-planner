@@ -50,10 +50,10 @@ const std::string frame_id 				= "car";
 
 class MiddleEndTest : public rclcpp::Node {
 public:
-  	MiddleEndTest() 
+  	MiddleEndTest(safe_planner::planner::front_end::Config::Algo algo) 
 	: Node("middle_end_test")
 	, map_({200,200,20}, 0.1, true, 1, {0,0,0}, {})
-	, front_end_(map_,{.algo = safe_planner::planner::front_end::Config::Algo::RRT})
+	, front_end_(map_,{.algo = algo})
 	, esdf_(map_, 0.1)
 	, middle_end_(map_,esdf_)
 	, sub_pcd_(
@@ -122,7 +122,7 @@ public:
 			tt_.Begin();
 			middle_end_.optimize(
 				pointsd, 
-				Eigen::Matrix<double, 3, 2>::Zero(), 
+				Eigen::Matrix<double, 3, 2>::Ones() * 0.3, 
 				Eigen::Matrix<double, 3, 2>::Zero(), 
 				trajectory);
 			tt_.End();
@@ -192,34 +192,34 @@ public:
 				path_msg.poses.push_back(pose);
 			}
 			pub_path_->publish(path_msg);
-			// trajectory.control_point(control_points);
-			// static visualization_msgs::msg::MarkerArray control_points_msg{};
-			// for(size_t i = 0;i < control_points_msg.markers.size();++i)
-			// 	control_points_msg.markers[i].action = visualization_msgs::msg::Marker::DELETEALL;
-			// pub_control_points_->publish(control_points_msg);
-			// control_points_msg.markers.clear();
-			// for(size_t i = 0; i < control_points.size(); ++i){
-			// 	visualization_msgs::msg::Marker pose;
-			// 	const auto p = control_points[i];
+			trajectory.control_point(control_points);
+			static visualization_msgs::msg::MarkerArray control_points_msg{};
+			for(size_t i = 0;i < control_points_msg.markers.size();++i)
+				control_points_msg.markers[i].action = visualization_msgs::msg::Marker::DELETEALL;
+			pub_control_points_->publish(control_points_msg);
+			control_points_msg.markers.clear();
+			for(size_t i = 0; i < control_points.size(); ++i){
+				visualization_msgs::msg::Marker pose;
+				const auto p = control_points[i];
 				// const auto g = control_gradients[i];
-				// pose.header.frame_id = frame_id;
-				// pose.pose.position.x = p.x();
-				// pose.pose.position.y = p.y();
-				// pose.pose.position.z = p.z();
+				pose.header.frame_id = frame_id;
+				pose.pose.position.x = p.x();
+				pose.pose.position.y = p.y();
+				pose.pose.position.z = p.z();
 				// Eigen::Quaterniond q = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), g.normalized());
 				// pose.pose.orientation.x = q.x();
 				// pose.pose.orientation.y = q.y();
 				// pose.pose.orientation.z = q.z();
 				// pose.pose.orientation.w = q.w();
-			// 	pose.id = i;
-			// 	pose.type = visualization_msgs::msg::Marker::ARROW;
-			// 	// pose.scale.x = g.norm();
-			// 	pose.scale.y = 0.1;
-			// 	pose.scale.z = 0.1;
-			// 	pose.lifetime.sec = 1;
-			// 	control_points_msg.markers.emplace_back(pose);
-			// }
-			// pub_control_points_->publish(control_points_msg);
+				pose.id = i;
+				pose.type = visualization_msgs::msg::Marker::ARROW;
+				// pose.scale.x = g.norm();
+				pose.scale.y = 0.1;
+				pose.scale.z = 0.1;
+				pose.lifetime.sec = 1;
+				control_points_msg.markers.emplace_back(pose);
+			}
+			pub_control_points_->publish(control_points_msg);
 		}))
 	{
 		
@@ -273,7 +273,11 @@ int main(int argc, char **argv) {
   	(void)argc;
   	(void)argv;
   	rclcpp::init(argc, argv);
-  	auto node = std::make_shared<MiddleEndTest>();
+	safe_planner::planner::front_end::Config::Algo al = safe_planner::planner::front_end::Config::Algo::RRT;
+	for(int i =0;i < argc;++i)
+		if(strcmp(argv[i],"jps"))
+			al = safe_planner::planner::front_end::Config::Algo::JPS;
+  	auto node = std::make_shared<MiddleEndTest>(al);
   	rclcpp::spin(node);
   	rclcpp::shutdown();
 }

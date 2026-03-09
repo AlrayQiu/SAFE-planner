@@ -8,7 +8,8 @@ namespace front_end{
 
 struct Config{
 enum class Algo{
-    RRT = 0
+    RRT = 0,
+    JPS = 1
 };
 Algo algo;
 };
