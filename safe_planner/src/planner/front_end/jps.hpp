@@ -723,10 +723,10 @@ static inline void jps_search(
     if(map.check_point_i(goal_index) != IMap::State::Safe)
         return ;
     graph_search.graph_search(start_index, goal_index, path_out);
-    path_out = remove_corner_pts(path_out, map);
+    // path_out = remove_corner_pts(path_out, map);
     std::reverse(std::begin(path_out), std::end(path_out));
-    path_out = remove_corner_pts(path_out, map);
-    path_out = remove_line_pts(path_out);        
+    // path_out = remove_corner_pts(path_out, map);
+    // path_out = remove_line_pts(path_out);        
 }
 
 }

@@ -27,9 +27,9 @@ void optimize(
     const std::vector<Eigen::Vector3d>& ref_path,
     const Eigen::Matrix<double,3,2>& begin_va,
     const Eigen::Matrix<double,3,2>& end_va,
-    trajectory::UniformBSpline& traj){
-        trajectory::impl::UniformBSplineImpl urbs{ref_path,begin_va,end_va};
-        middle_end::optimizer::ParameterizedUrbsOpt<TMap> opt(urbs,esdf_,map_);
+    trajectory::UniformBSpline_K<6>& traj){
+        trajectory::impl::UniformBSplineK6Impl urbs{ref_path,begin_va,end_va};
+        middle_end::optimizer::ParameterizedUrbsK6Opt<TMap> opt(urbs,esdf_,map_);
         Eigen::VectorXd x;
         double fx;
         opt.init_x(x);
@@ -102,7 +102,7 @@ static double cost_function(void *instance,
                                Eigen::VectorXd &grad)
 {
     auto data = static_cast<optdata*>(instance);
-    auto opt = static_cast<middle_end::optimizer::ParameterizedUrbsOpt<TMap>*>(data->opt);
+    auto opt = static_cast<middle_end::optimizer::ParameterizedUrbsK6Opt<TMap>*>(data->opt);
 
     double j;
     opt->set_x(x);
@@ -124,7 +124,7 @@ CLASS(void)::optimize(
     const std::vector<Eigen::Vector3d>& ref_path,
     const Eigen::Matrix<double,3,2>& begin_va,
     const Eigen::Matrix<double,3,2>& end_va,
-    trajectory::UniformBSpline& traj){
+    trajectory::UniformBSpline_K<6>& traj){
         impl_->optimize(ref_path, begin_va, end_va, traj);
 }
 CLASS(void)::test_optimizer(

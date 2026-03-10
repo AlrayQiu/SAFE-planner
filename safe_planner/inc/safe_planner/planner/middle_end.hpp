@@ -27,7 +27,7 @@ public:
         const std::vector<Eigen::Vector3d>& ref_path,
         const Eigen::Matrix<double,3,2>& begin_va,
         const Eigen::Matrix<double,3,2>& end_va,
-        trajectory::UniformBSpline& traj);
+        trajectory::UniformBSpline_K<6>& traj);
     void test_optimizer(
         trajectory::MultiPoly& traj,
         std::vector<Eigen::Vector3d>& gradients);

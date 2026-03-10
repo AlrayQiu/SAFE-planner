@@ -45,7 +45,7 @@ inline void reset(){
     dj_dt_.array() *= 1e-4;
     samples_cost();
 }
-void minimal_jerk(){
+inline void minimal_jerk(){
     for(int i = 0;i < poly_.pieces_num_;++i){
         j_ += 36.0 * poly_.b_.row(6 * i + 3).squaredNorm() * poly_.t1_(i)
             + 144.0 * poly_.b_.row(6 * i + 3).dot(poly_.b_.row(6 * i + 4)) * poly_.t2_(i) 
@@ -77,7 +77,7 @@ void minimal_jerk(){
     }
 }
 
-void samples_cost(){
+inline void samples_cost(){
     Eigen::Matrix3Xd points;
     points.resize(3, poly_.pieces_num_ * sample_count_ + 1);
     int id_p = -1;
@@ -176,7 +176,7 @@ void samples_cost(){
         }
     }
 }  
-void distance_cost(const Eigen::Matrix3Xd &ps,
+inline void distance_cost(const Eigen::Matrix3Xd &ps,
                     Eigen::Matrix3Xd &gdp,
                     double &var)
 {
@@ -203,7 +203,7 @@ void distance_cost(const Eigen::Matrix3Xd &ps,
 }
 
 
-bool obstacle_cost(const Eigen::Vector3d& p, Eigen::Vector3d& dp, double& cost){
+inline bool obstacle_cost(const Eigen::Vector3d& p, Eigen::Vector3d& dp, double& cost){
     if(map_.check_point_d(p.template cast<float>()) == IMap::State::Safe) return false;
 
     const auto[d,g] = esdf_.get_esdf(p.cast<float>(), 0);
@@ -212,7 +212,7 @@ bool obstacle_cost(const Eigen::Vector3d& p, Eigen::Vector3d& dp, double& cost){
     return true; 
 }
 
-bool feasibility_cost_v(const Eigen::Vector3d &v,
+inline bool feasibility_cost_v(const Eigen::Vector3d &v,
                         Eigen::Vector3d &gradv,
                         double &costv){
     double v_squnorm = v.squaredNorm();
@@ -226,7 +226,7 @@ bool feasibility_cost_v(const Eigen::Vector3d &v,
     }
     return false;
 }
-bool feasibility_cost_a(const Eigen::Vector3d &a,
+inline bool feasibility_cost_a(const Eigen::Vector3d &a,
                         Eigen::Vector3d &grada,
                         double &costa)
 {

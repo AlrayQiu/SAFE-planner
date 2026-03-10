@@ -18,6 +18,7 @@
 #include "safe_planner/planner/middle_end.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "safe_planner/trajectory/bspline.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "std_msgs/msg/float32_multi_array.hpp"
@@ -52,7 +53,7 @@ class MiddleEndTest : public rclcpp::Node {
 public:
   	MiddleEndTest(safe_planner::planner::front_end::Config::Algo algo) 
 	: Node("middle_end_test")
-	, map_({200,200,20}, 0.1, true, 1, {0,0,0}, {})
+	, map_({200,200,10}, 0.1, true, 1, {0,0,0}, {})
 	, front_end_(map_,{.algo = algo})
 	, esdf_(map_, 0.1)
 	, middle_end_(map_,esdf_)
@@ -112,7 +113,7 @@ public:
 			static std::vector<Eigen::Vector3d> control_points;
 			static std::vector<Eigen::Vector3d> control_gradients;
 
-			safe_planner::planner::trajectory::UniformBSpline trajectory;
+			safe_planner::planner::trajectory::UniformBSpline_K<6> trajectory;
 			std::string info;
 			front_end_.search(robot_position_, robot_target_, points);
 			pointsd.clear();
